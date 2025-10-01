@@ -55,6 +55,4 @@ See `requirements.txt` for all packages.
 - `pyvista`
 - `tkinter` (standard with Python)
 
-## License
 
-Specify your license here (e.g., MIT, Apache-2.0).
