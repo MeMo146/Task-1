@@ -12,16 +12,9 @@ A modern Python desktop app for visualizing and segmenting organs in CT scans, w
 
 ## Screenshots
 
-![WhatsApp Image 2025-10-01 at 23 45 00_f4bfecfe](https://github.com/user-attachments/assets/a758efa1-7bb7-4547-a300-52caf713b667)
-
-
-
-![WhatsApp Image 2025-10-01 at 23 33 39_79a64e2d](https://github.com/user-attachments/assets/3954adad-2c5a-43b3-a2b0-7a8e6e76180e)
-
-
-
-![WhatsApp Image 2025-10-02 at 00 49 03_842a7b69](https://github.com/user-attachments/assets/b1f7660a-0544-457b-9ee2-a8e4b9887ec8)
-
+![Description](assets/images/ribcage.png)
+![Description](assets/images/lungs.png)
+![Description](assets/images/spinal-cord.png)
 
 ## Requirements
 
