@@ -1,1 +1,7 @@
-
+totalsegmentator
+nibabel
+numpy
+matplotlib
+scikit-image
+pyvista
+pyvistaqt
