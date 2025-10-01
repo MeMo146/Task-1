@@ -12,12 +12,11 @@ A modern Python desktop app for visualizing and segmenting organs in CT scans, w
 
 ## Screenshots
 
-![Rib Cage Example](assets/rib_cage.png)
+![Rib Cage Example](assests/images/rib_cage.png)
 
-![Spine Example](assets/spine.png)
+![Spine Example](assests/images/spine.png)
 
-![Lungs/Airway Example](assets/lungs.png)
-
+![Lungs/Airway Example](assests/images/lungs.png)
 
 ## Requirements
 
