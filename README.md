@@ -5,10 +5,21 @@ A modern Python desktop app for visualizing and segmenting organs in CT scans, w
 ## Features
 
 - Load NIfTI CT (`.nii`/`.nii.gz`) files
-- Segment organs: heart, liver, lungs + airway, spinal cord
+- Segment organs: heart, liver, lungs + airway, spinal cord, rib cage
 - 2D slice viewer with interactive segmentation overlays
 - 3D model viewer and STL export for each organ and combined model (PyVista)
 - GUI with easy workflow (Tkinter)
+
+## Screenshots
+
+**Lungs and Airway Segmentation:**
+![Lungs/Airway Example](image1)
+
+**Spine/Spinal Cord Segmentation:**
+![Spine Example](image2)
+
+**Rib Cage Segmentation:**
+![Rib Cage Example](image3)
 
 ## Requirements
 
