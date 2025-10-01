@@ -73,21 +73,6 @@ python ct_segmentation_viewer2.py
 
 ---
 
-## Demo
-
-You can add a GIF or video demo here:
-
-```markdown
-![App Demo](assets/demo.gif)
-```
-Or, for a YouTube video:
-
-```markdown
-[![Watch the demo](assets/demo_thumbnail.png)](https://youtu.be/your_video_id)
-```
-
----
-
 ## Notes
 
 - Only lungs/airway, spinal cord/vertebrae, and rib cage are supported in this version.
