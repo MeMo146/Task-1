@@ -13,13 +13,13 @@ A modern Python desktop app for visualizing and segmenting organs in CT scans, w
 ## Screenshots
 
 **Lungs and Airway Segmentation:**
-![Lungs/Airway Example](assets/images/image1.png)
+![Lungs/Airway Example](assets/images/image1.jpg)
 
 **Spine/Spinal Cord Segmentation:**
-![Spine Example](assets/images/image2.png)
+![Spine Example](assets/images/image2.jpg)
 
 **Rib Cage Segmentation:**
-![Rib Cage Example](assets/images/image3.png)
+![Rib Cage Example](assets/images/image3.jpg)
 
 ## Requirements
 
