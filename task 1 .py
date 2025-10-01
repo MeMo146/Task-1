@@ -23,8 +23,9 @@ class SegmentationGUI:
         self.slice_index = 0
         self.mask_data = None
         self.plotter = None
-        self.mask_colors_2d = {}   # organ_name -> color for 2D display (matplotlib or hex)
-        self.color_buttons = {}    # organ_name -> button widget
+        self.mask_colors_2d = {}
+        self.color_buttons = {}
+        self.opacity_3d = 1.0  # Default fully opaque
 
         # --- Control panel on left ---
         control_frame = tk.Frame(root)
@@ -34,7 +35,6 @@ class SegmentationGUI:
         tk.Button(control_frame, text="Select Output Folder", command=self.select_output_folder).pack(pady=5, fill="x")
 
         tk.Label(control_frame, text="Choose Organ:").pack(pady=5)
-        # Remove "liver" from the options
         organ_options = ["lungs_airway", "spinal_cord", "rib_cage"]
         self.organ_var = tk.StringVar(value=organ_options[0])
         self.organ_dropdown = ttk.Combobox(control_frame, textvariable=self.organ_var, values=organ_options, state="readonly")
@@ -46,16 +46,22 @@ class SegmentationGUI:
         self.color_control_frame = tk.LabelFrame(control_frame, text="Mask Colors (2D only)")
         self.color_control_frame.pack(fill="x", pady=10)
 
+        # --- 3D Opacity slider ---
+        opacity_frame = tk.LabelFrame(control_frame, text="3D Opacity")
+        opacity_frame.pack(fill="x", pady=10)
+        self.opacity_slider = tk.Scale(opacity_frame, from_=0, to=100, resolution=1, orient="horizontal",
+                                       command=self.update_opacity_3d)
+        self.opacity_slider.set(int(self.opacity_3d * 100))
+        self.opacity_slider.pack(fill="x")
+
         # --- Right side: viewers ---
         right_frame = tk.Frame(root)
         right_frame.pack(side="right", fill="both", expand=True)
 
-        # Matplotlib figures (CT + segmentation)
         self.fig, (self.ax_ct, self.ax_seg) = plt.subplots(1, 2, figsize=(10, 5))
         self.canvas = FigureCanvasTkAgg(self.fig, master=right_frame)
         self.canvas.get_tk_widget().pack()
 
-        # Slider
         self.slider = tk.Scale(right_frame, from_=0, to=0, orient="horizontal", command=self.update_slice)
         self.slider.pack(fill="x")
 
@@ -84,7 +90,6 @@ class SegmentationGUI:
             messagebox.showinfo("Segmentation", f"Running segmentation for {organ}...")
             totalsegmentator(self.input_ct_path, self.output_dir, task="total")
 
-            # Segmentation results folder
             seg_dir = self.output_dir
             if os.path.isdir(os.path.join(self.output_dir, "segmentations")):
                 seg_dir = os.path.join(self.output_dir, "segmentations")
@@ -105,9 +110,7 @@ class SegmentationGUI:
                 messagebox.showerror("Error", f"No mask found for {organ}")
                 return
 
-            # Set default mask colors for each mask (2D only)
             self.setup_mask_colors_2d()
-
             self.update_display()
             self.setup_color_controls()
             self.show_3d_models()
@@ -116,7 +119,6 @@ class SegmentationGUI:
             messagebox.showerror("Error", f"Segmentation failed:\n{e}")
 
     def setup_mask_colors_2d(self):
-        # Set default colors for 2D overlays and initialize color control buttons
         self.mask_colors_2d.clear()
         for idx, (mask_data, organ_name) in enumerate(self.masks):
             default_colors = [
@@ -126,12 +128,9 @@ class SegmentationGUI:
             self.mask_colors_2d[organ_name] = default_colors[idx % len(default_colors)]
 
     def setup_color_controls(self):
-        # Remove old color buttons
         for btn in self.color_buttons.values():
             btn.destroy()
         self.color_buttons.clear()
-
-        # For each mask, add a button to select color
         for organ_name in self.mask_colors_2d:
             color = self.mask_colors_2d[organ_name]
             btn = tk.Button(self.color_control_frame, text=f"Change {organ_name} color (2D only)", bg=color,
@@ -140,15 +139,18 @@ class SegmentationGUI:
             self.color_buttons[organ_name] = btn
 
     def change_mask_color_2d(self, organ_name):
-        # Open color chooser dialog
         initial_color = self.mask_colors_2d.get(organ_name, "#ff0000")
         color_code = colorchooser.askcolor(title=f"Choose color for {organ_name} (2D)", initialcolor=initial_color)
         if color_code and color_code[1]:
             self.mask_colors_2d[organ_name] = color_code[1]
-            # Update button color
             self.color_buttons[organ_name].configure(bg=color_code[1])
-            # Update only the 2D overlay
             self.update_display()
+
+    def update_opacity_3d(self, val):
+        self.opacity_3d = float(val) / 100.0
+        # If 3D models are visible, update their opacity
+        if self.plotter is not None:
+            self.show_3d_models()
 
     def segment_single_organ(self, seg_dir, organ):
         mask_path = None
@@ -165,27 +167,21 @@ class SegmentationGUI:
         lung_keywords = ["lung_upper_lobe_left", "lung_lower_lobe_left",
                          "lung_upper_lobe_right", "lung_middle_lobe_right", "lung_lower_lobe_right"]
         airway_keywords = ["trachea", "bronchus"]
-
         combined_mask = None
-
-        # Lungs
         for keyword in lung_keywords:
             for file in os.listdir(seg_dir):
                 if file.endswith(".nii.gz") and keyword in file:
                     lung_mask = nib.load(os.path.join(seg_dir, file)).get_fdata()
                     if combined_mask is None:
                         combined_mask = np.zeros_like(lung_mask)
-                    combined_mask[lung_mask > 0] = 1  # lungs label
-
-        # Airway
+                    combined_mask[lung_mask > 0] = 1
         for keyword in airway_keywords:
             for file in os.listdir(seg_dir):
                 if file.endswith(".nii.gz") and keyword in file:
                     airway_mask = nib.load(os.path.join(seg_dir, file)).get_fdata()
                     if combined_mask is None:
                         combined_mask = np.zeros_like(airway_mask)
-                    combined_mask[airway_mask > 0] = 2  # airway label
-
+                    combined_mask[airway_mask > 0] = 2
         if combined_mask is not None:
             self.mask_data = combined_mask
             self.masks.append((combined_mask, "lungs_airway"))
@@ -199,10 +195,8 @@ class SegmentationGUI:
             "sacrum",
             "spinal_canal", "spinal_cord"
         ]
-
         combined_mask = None
         label_id = 1
-
         for keyword in vertebrae_keywords:
             for file in os.listdir(seg_dir):
                 if file.endswith(".nii.gz") and keyword in file:
@@ -212,16 +206,13 @@ class SegmentationGUI:
                     combined_mask[mask > 0] = label_id
                     self.masks.append((mask, keyword))
                     label_id += 1
-
         if combined_mask is not None:
             self.mask_data = combined_mask
 
     def segment_rib_cage(self, seg_dir):
         rib_keywords = [f"rib_{i}" for i in range(1, 25)] + ["sternum"]
-
         combined_mask = None
         label_id = 1
-
         for keyword in rib_keywords:
             for file in os.listdir(seg_dir):
                 if file.endswith(".nii.gz") and keyword in file:
@@ -231,7 +222,6 @@ class SegmentationGUI:
                     combined_mask[mask > 0] = label_id
                     self.masks.append((mask, keyword))
                     label_id += 1
-
         if combined_mask is not None:
             self.mask_data = combined_mask
 
@@ -239,42 +229,31 @@ class SegmentationGUI:
         if not self.masks:
             messagebox.showerror("Error", "No masks loaded to visualize.")
             return
-
         try:
-            # Create a BackgroundPlotter (doesn't block Tkinter)
+            if self.plotter is not None:
+                self.plotter.close()
             self.plotter = BackgroundPlotter(window_size=(1000, 800))
-            # 3D color palette remains fixed, not affected by 2D color changes
             default_colors = [
                 "red", "green", "blue", "yellow", "purple", "cyan",
                 "orange", "pink", "lime", "teal"
             ]
-
             for i, (mask_data, organ_name) in enumerate(self.masks):
                 binary_mask = (mask_data > 0).astype(np.uint8)
                 if not np.any(binary_mask):
                     print(f"⚠ Skipping {organ_name}: mask is empty.")
                     continue
-
                 try:
-                    # Extract mesh from binary mask
                     verts, faces, _, _ = measure.marching_cubes(binary_mask, level=0.5)
                     faces = np.c_[np.full(len(faces), 3), faces].ravel()
                     mesh = pv.PolyData(verts, faces)
-
-                    # Use fixed 3D color palette
                     color = default_colors[i % len(default_colors)]
-
-                    # Add mesh to plotter
-                    self.plotter.add_mesh(mesh, color=color, opacity=1.0, name=organ_name)
+                    self.plotter.add_mesh(mesh, color=color, opacity=self.opacity_3d, name=organ_name)
                     self.plotter.add_text(organ_name, font_size=10, name=f"text_{organ_name}")
-
                 except Exception as e:
                     print(f"❌ Could not create mesh for {organ_name}: {e}")
                     messagebox.showerror("Meshing Error", f"Could not create 3D model for {organ_name}:\n{e}")
-
             self.plotter.add_axes()
             self.plotter.show()
-
         except Exception as e:
             messagebox.showerror("3D Viewer Error", str(e))
 
@@ -285,18 +264,14 @@ class SegmentationGUI:
     def update_display(self):
         self.ax_ct.clear()
         self.ax_seg.clear()
-
         if self.ct_data is not None:
             self.ax_ct.imshow(self.ct_data[:, :, self.slice_index], cmap="gray")
             self.ax_ct.set_title("CT Scan")
-
         if self.ct_data is not None:
             self.ax_seg.imshow(self.ct_data[:, :, self.slice_index], cmap="gray")
-
         if self.mask_data is not None:
             organ = self.organ_var.get()
             if organ == "lungs_airway":
-                # Show two labels with user-selected 2D colors for overlay
                 for i, label_val in enumerate([1, 2]):
                     mask = (self.mask_data == label_val).astype(np.uint8)
                     if mask.shape == self.ct_data.shape:
@@ -306,14 +281,12 @@ class SegmentationGUI:
                         cmap = ListedColormap(["none", color])
                         self.ax_seg.imshow(mask[:, :, self.slice_index], cmap=cmap, alpha=0.5, vmin=0, vmax=1)
             else:
-                # Overlay with selected 2D color, fallback to red
                 for mask, organ_name in self.masks:
                     if mask.shape == self.ct_data.shape:
                         color = self.mask_colors_2d.get(organ_name, "#ff0000")
                         from matplotlib.colors import ListedColormap
                         cmap = ListedColormap(["none", color])
                         self.ax_seg.imshow((mask[:, :, self.slice_index] > 0).astype(np.uint8), cmap=cmap, alpha=0.5, vmin=0, vmax=1)
-
         self.ax_seg.set_title("Segmentation Overlay (2D)")
         self.fig.tight_layout()
         self.canvas.draw()
