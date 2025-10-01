@@ -1,202 +1,247 @@
+import os
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
+from totalsegmentator.python_api import totalsegmentator
 import nibabel as nib
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import torch
-
-# MONAI imports for U-Net and basic transforms
-from monai.networks.nets import UNet
-from monai.transforms import Compose, LoadImaged, EnsureChannelFirstd, ScaleIntensityd, ResizeD, ToTensord
-
-# Import for GPU performance optimization
-from torch.cuda.amp import autocast
-
-# Suppress some MONAI warnings
-import warnings
-warnings.filterwarnings("ignore")
+import matplotlib.pyplot as plt
+from skimage import measure
+import pyvista as pv
+from pyvistaqt import BackgroundPlotter
 
 
-class SegmentationApp:
-    def _init_(self, root):
+class SegmentationGUI:
+    def __init__(self, root):
         self.root = root
-        self.root.title("Medical Image Segmentation with U-Net")
+        self.root.title("CT Scan Organ Segmentation Viewer")
 
-        self.image_data = None
-        self.segmentation = None
-        self.slice_idx = 0
+        # --- Data holders ---
+        self.input_ct_path = None
+        self.output_dir = None
+        self.ct_data = None
+        self.masks = []  # list of (mask_data, organ_name)
+        self.slice_index = 0
+        self.mask_data = None
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}")
+        # --- Control panel on left ---
+        control_frame = tk.Frame(root)
+        control_frame.pack(side="left", fill="y", padx=10, pady=10)
 
-        if self.device.type == 'cuda':
-            print("Enabling cuDNN benchmark mode for performance.")
-            torch.backends.cudnn.benchmark = True
+        tk.Button(control_frame, text="Select CT File", command=self.select_ct_file).pack(pady=5, fill="x")
+        tk.Button(control_frame, text="Select Output Folder", command=self.select_output_folder).pack(pady=5, fill="x")
 
-        # --- Initialize a Generic, OFFLINE U-Net Model ---
-        # NOTE: This model is UNTRAINED. Its output will be random noise.
-        # This is necessary to avoid the network download errors.
-        print("Initializing a generic U-Net model (no download required)...")
-        self.model = UNet(
-            spatial_dims=3,
-            in_channels=1,
-            out_channels=2,  # background and foreground
-            channels=(16, 32, 64, 128, 256),
-            strides=(2, 2, 2, 2),
-            num_res_units=2,
-        ).to(self.device)
-        self.model.eval()
-        print("U-Net model initialized.")
+        tk.Label(control_frame, text="Choose Organ:").pack(pady=5)
+        self.organ_var = tk.StringVar(value="heart")
+        organ_options = ["heart", "liver", "lungs_airway", "spinalcord"]
+        self.organ_dropdown = ttk.Combobox(control_frame, textvariable=self.organ_var, values=organ_options, state="readonly")
+        self.organ_dropdown.pack(pady=5, fill="x")
 
-        # Define a simple, offline transform pipeline
-        self.transforms = Compose([
-            LoadImaged(keys=["image"]),
-            EnsureChannelFirstd(keys=["image"]),
-            ScaleIntensityd(keys=["image"]),
-            ResizeD(keys=["image"], spatial_size=(128, 128, 128), mode="trilinear", align_corners=False),
-            ToTensord(keys=["image"]),
-        ])
+        tk.Button(control_frame, text="Run Organ Segmentation", command=self.run_segmentation).pack(pady=10, fill="x")
 
-        self.build_ui()
+        # --- Right side: viewers ---
+        right_frame = tk.Frame(root)
+        right_frame.pack(side="right", fill="both", expand=True)
 
-    def build_ui(self):
-        btn_frame = tk.Frame(self.root)
-        btn_frame.pack(pady=10)
+        # Matplotlib figures (CT + segmentation)
+        self.fig, (self.ax_ct, self.ax_seg) = plt.subplots(1, 2, figsize=(10, 5))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=right_frame)
+        self.canvas.get_tk_widget().pack()
 
-        load_btn = tk.Button(btn_frame, text="Load Image", command=self.load_file)
-        load_btn.pack(side=tk.LEFT, padx=5)
+        # Slider
+        self.slider = tk.Scale(right_frame, from_=0, to=0, orient="horizontal", command=self.update_slice)
+        self.slider.pack(fill="x")
 
-        img_frame = tk.Frame(self.root)
-        img_frame.pack()
-
-        self.fig1, self.ax1 = plt.subplots()
-        self.canvas1 = FigureCanvasTkAgg(self.fig1, master=img_frame)
-        self.canvas1.get_tk_widget().pack(side=tk.LEFT, padx=10)
-
-        self.fig2, self.ax2 = plt.subplots()
-        self.canvas2 = FigureCanvasTkAgg(self.fig2, master=img_frame)
-        self.canvas2.get_tk_widget().pack(side=tk.RIGHT, padx=10)
-
-        nav_frame = tk.Frame(self.root)
-        nav_frame.pack(pady=10)
-
-        prev_btn = tk.Button(nav_frame, text="◀ Prev", command=self.prev_slice)
-        prev_btn.pack(side=tk.LEFT, padx=5)
-
-        self.slice_label = tk.Label(nav_frame, text="Slice: 0")
-        self.slice_label.pack(side=tk.LEFT, padx=10)
-
-        next_btn = tk.Button(nav_frame, text="Next ▶", command=self.next_slice)
-        next_btn.pack(side=tk.LEFT, padx=5)
-
-        self.slice_slider = tk.Scale(
-            nav_frame,
-            from_=0,
-            to=1,
-            orient=tk.HORIZONTAL,
-            command=self._slider_changed,
-            length=400
+    def select_ct_file(self):
+        self.input_ct_path = filedialog.askopenfilename(
+            title="Select CT scan file",
+            filetypes=[("NIfTI files", ".nii *.nii.gz"), ("All files", ".*")]
         )
-        self.slice_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=20)
-
-        self.root.bind("<Left>", lambda event: self.prev_slice())
-        self.root.bind("<Right>", lambda event: self.next_slice())
-        self.root.bind("<MouseWheel>", self._on_mouse_scroll)
-        self.root.bind("<Button-4>", self._on_mouse_scroll)
-        self.root.bind("<Button-5>", self._on_mouse_scroll)
-
-    def load_file(self):
-        file_path = filedialog.askopenfilename(
-            filetypes=[("NIfTI files", "*.nii *.nii.gz")]
-        )
-        if not file_path:
-            return
-
-        self.root.config(cursor="watch")
-        self.root.update()
-
-        try:
-            # 1. Apply the simple preprocessing transforms
-            data_dict = self.transforms({"image": file_path})
-            image_tensor = data_dict["image"]
-
-            # 2. Run inference on the U-Net
-            with torch.no_grad():
-                val_inputs = image_tensor.unsqueeze(0).to(self.device)
-                if self.device.type == 'cuda':
-                    with autocast():
-                        output_tensor = self.model(val_inputs)
-                else:
-                    output_tensor = self.model(val_inputs)
-
-            # 3. Post-process the output
-            segmentation_map = torch.argmax(output_tensor, dim=1).squeeze(0).cpu().numpy()
-
-            # The image for display is the resized one fed to the model
-            self.image_data = image_tensor.squeeze(0).cpu().numpy()
-            self.segmentation = segmentation_map.astype(np.uint8)
-
-            # 4. Update the GUI
-            self.slice_idx = self.image_data.shape[0] // 2 # Slice along depth (axis 0)
-            self.slice_slider.config(to=self.image_data.shape[0] - 1)
+        if self.input_ct_path:
+            ct_img = nib.load(self.input_ct_path)
+            self.ct_data = ct_img.get_fdata()
+            self.slice_index = self.ct_data.shape[2] // 2
+            self.slider.config(to=self.ct_data.shape[2] - 1)
             self.update_display()
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to process file:\n{e}")
-            import traceback
-            traceback.print_exc()
-        finally:
-            self.root.config(cursor="")
+    def select_output_folder(self):
+        self.output_dir = filedialog.askdirectory(title="Select Output Directory")
 
-    def update_display(self):
-        if self.image_data is None:
+    def run_segmentation(self):
+        if not self.input_ct_path or not self.output_dir:
+            messagebox.showerror("Error", "Select input CT and output folder first!")
             return
 
-        self.ax1.clear()
-        self.ax2.clear()
+        organ = self.organ_var.get()
+        try:
+            messagebox.showinfo("Segmentation", f"Running segmentation for {organ}...")
+            totalsegmentator(self.input_ct_path, self.output_dir, task="total")
 
-        # Data from transforms is (D, H, W). We show the H, W plane.
-        img_slice = self.image_data[self.slice_idx, :, :]
-        seg_slice = self.segmentation[self.slice_idx, :, :]
+            # Segmentation results folder
+            seg_dir = self.output_dir
+            if os.path.isdir(os.path.join(self.output_dir, "segmentations")):
+                seg_dir = os.path.join(self.output_dir, "segmentations")
 
-        self.ax1.imshow(img_slice, cmap="gray")
-        self.ax1.set_title("Original Image (Resized)")
-        self.ax1.axis("off")
+            self.masks.clear()
+            self.mask_data = None
 
-        self.ax2.imshow(img_slice, cmap="gray")
-        self.ax2.imshow(seg_slice, alpha=0.5, cmap="Reds", vmin=0, vmax=1)
-        self.ax2.set_title("Segmented Image (Untrained)")
-        self.ax2.axis("off")
+            if organ == "lungs_airway":
+                self.segment_lungs_airway(seg_dir)
+            elif organ == "spinalcord":
+                self.segment_spinalcord(seg_dir)
+            else:
+                self.segment_single_organ(seg_dir, organ)
 
-        self.canvas1.draw()
-        self.canvas2.draw()
+            if self.mask_data is None or not np.any(self.mask_data):
+                messagebox.showerror("Error", f"No mask found for {organ}")
+                return
 
-        self.slice_label.config(text=f"Slice: {self.slice_idx}")
-        self.slice_slider.set(self.slice_idx)
+            self.update_display()
+            self.show_3d_models()
 
-    def prev_slice(self):
-        if self.image_data is None: return
-        self.slice_idx = max(0, self.slice_idx - 1)
+        except Exception as e:
+            messagebox.showerror("Error", f"Segmentation failed:\n{e}")
+
+    def segment_single_organ(self, seg_dir, organ):
+        mask_path = None
+        for file in os.listdir(seg_dir):
+            if file.endswith(".nii.gz") and organ in file:
+                mask_path = os.path.join(seg_dir, file)
+                break
+        if mask_path:
+            mask_img = nib.load(mask_path)
+            self.mask_data = mask_img.get_fdata()
+            self.masks.append((self.mask_data, organ))
+
+    def segment_lungs_airway(self, seg_dir):
+        lung_keywords = ["lung_upper_lobe_left", "lung_lower_lobe_left",
+                         "lung_upper_lobe_right", "lung_middle_lobe_right", "lung_lower_lobe_right"]
+        airway_keywords = ["trachea", "bronchus"]
+
+        combined_mask = None
+
+        # Lungs
+        for keyword in lung_keywords:
+            for file in os.listdir(seg_dir):
+                if file.endswith(".nii.gz") and keyword in file:
+                    lung_mask = nib.load(os.path.join(seg_dir, file)).get_fdata()
+                    if combined_mask is None:
+                        combined_mask = np.zeros_like(lung_mask)
+                    combined_mask[lung_mask > 0] = 1
+                    self.masks.append((lung_mask, keyword))
+
+        # Airway
+        for keyword in airway_keywords:
+            for file in os.listdir(seg_dir):
+                if file.endswith(".nii.gz") and keyword in file:
+                    airway_mask = nib.load(os.path.join(seg_dir, file)).get_fdata()
+                    if combined_mask is None:
+                        combined_mask = np.zeros_like(airway_mask)
+                    combined_mask[airway_mask > 0] = 2
+                    self.masks.append((airway_mask, keyword))
+
+        if combined_mask is not None:
+            self.mask_data = combined_mask
+
+    def segment_spinalcord(self, seg_dir):
+        spinal_keywords = ["vertebra", "spinalcord", "spinal_cord", "cord"]
+        combined_mask = None
+
+        for file in os.listdir(seg_dir):
+            if file.endswith(".nii.gz") and any(k in file for k in spinal_keywords):
+                mask_data = nib.load(os.path.join(seg_dir, file)).get_fdata()
+                name = file.replace(".nii.gz", "")
+                self.masks.append((mask_data, name))
+
+                if combined_mask is None:
+                    combined_mask = np.zeros_like(mask_data)
+                combined_mask[mask_data > 0] = 1
+
+        if combined_mask is not None:
+            self.mask_data = combined_mask
+
+    def show_3d_models(self):
+        """Convert masks to meshes and display in PyVista BackgroundPlotter, also save STLs."""
+        if not self.masks:
+            messagebox.showerror("Error", "No masks loaded to visualize.")
+            return
+
+        try:
+            plotter = BackgroundPlotter(window_size=(1000, 800))
+            colors = ["red", "green", "blue", "yellow", "purple", "cyan", "orange", "pink"]
+
+            combined_meshes = []
+
+            for i, (mask_data, organ_name) in enumerate(self.masks):
+                binary_mask = (mask_data > 0).astype(np.uint8)
+                if not np.any(binary_mask):
+                    continue
+
+                try:
+                    verts, faces, _, _ = measure.marching_cubes(binary_mask, level=0.5)
+                    faces = np.c_[np.full(len(faces), 3), faces].ravel()
+                    mesh = pv.PolyData(verts, faces)
+
+                    # Add to 3D viewer
+                    plotter.add_mesh(mesh, color=colors[i % len(colors)], opacity=0.7, name=organ_name)
+
+                    # Save STL
+                    stl_path = os.path.join(self.output_dir, f"{organ_name}.stl")
+                    mesh.save(stl_path)
+                    print(f"✅ Saved {stl_path}")
+
+                    combined_meshes.append(mesh)
+
+                except Exception as e:
+                    print(f"❌ Could not create mesh for {organ_name}: {e}")
+
+            # Save combined STL
+            if combined_meshes:
+                combined = combined_meshes[0]
+                for m in combined_meshes[1:]:
+                    combined = combined.merge(m)
+                combined_path = os.path.join(self.output_dir, "combined_model.stl")
+                combined.save(combined_path)
+                print(f"✅ Saved combined model: {combined_path}")
+
+            plotter.add_axes()
+            plotter.show()
+
+        except Exception as e:
+            messagebox.showerror("3D Viewer Error", str(e))
+
+    def update_slice(self, val):
+        self.slice_index = int(val)
         self.update_display()
 
-    def next_slice(self):
-        if self.image_data is None: return
-        self.slice_idx = min(self.image_data.shape[0] - 1, self.slice_idx + 1)
-        self.update_display()
+    def update_display(self):
+        self.ax_ct.clear()
+        self.ax_seg.clear()
 
-    def _slider_changed(self, val):
-        self.slice_idx = int(float(val))
-        self.update_display()
+        if self.ct_data is not None:
+            self.ax_ct.imshow(self.ct_data[:, :, self.slice_index], cmap="gray")
+            self.ax_ct.set_title("CT Scan")
 
-    def _on_mouse_scroll(self, event):
-        if self.image_data is None: return
-        if event.num == 4 or (hasattr(event, 'delta') and event.delta > 0):
-            self.prev_slice()
-        elif event.num == 5 or (hasattr(event, 'delta') and event.delta < 0):
-            self.next_slice()
+        if self.ct_data is not None:
+            self.ax_seg.imshow(self.ct_data[:, :, self.slice_index], cmap="gray")
 
-if _name_ == "_main_":
+        if self.mask_data is not None:
+            if self.organ_var.get() == "lungs_airway":
+                colors = ["Blues", "Oranges"]
+                for i, label_val in enumerate([1, 2]):
+                    mask = (self.mask_data == label_val).astype(np.uint8)
+                    if mask.shape == self.ct_data.shape:
+                        self.ax_seg.imshow(mask[:, :, self.slice_index], cmap=colors[i], alpha=0.5)
+            else:
+                if self.mask_data.shape == self.ct_data.shape:
+                    self.ax_seg.imshow(self.mask_data[:, :, self.slice_index], cmap="Reds", alpha=0.5)
+
+        self.ax_seg.set_title("Segmentation Overlay")
+        self.fig.tight_layout()
+        self.canvas.draw()
+
+
+if __name__ == "__main__":
     root = tk.Tk()
-    app = SegmentationApp(root)
-    root.mainloop()
+    app = SegmentationGUI(root)
+    root.mainloop()
