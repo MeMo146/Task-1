@@ -1,4 +1,4 @@
-# CT Scan Organ Segmentation Viewer (Enhanced Version)
+# CT Scan Medical organ segmentation 
 
 A Python desktop application for **visualizing and segmenting organs in CT scans** with advanced 3D opacity control. Load a NIfTI CT file, segment organs using [TotalSegmentator](https://github.com/wasserth/TotalSegmentator), explore 2D overlays, customize overlay colors, and interactively adjust 3D model opacity.
 
