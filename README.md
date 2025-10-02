@@ -1,6 +1,6 @@
-ys# CT Scan Medical organ segmentation 
+# CT Scan Medical organ segmentation 
 
-A Python desktop application for **visualizing and segmenting organs in CT scans** with advanced 3D opacity control. Load a NIfTI CT file, segment organs using [TotalSegmentator](https://github.com/wa[...]
+A Python desktop application for **visualizing and segmenting organs in CT scans** with advanced 3D opacity control. Load a NIfTI CT file, segment organs using [TotalSegmentator]
 
 ---
 
