@@ -16,9 +16,8 @@ A Python desktop application for **visualizing and segmenting organs in CT scans
 
 ---
 
-## Screenshots
+## Visual Overview
 
-## Screenshots
 
 <table>
   <tr>
