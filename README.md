@@ -18,6 +18,8 @@ A Python desktop application for **visualizing and segmenting organs in CT scans
 
 ## Screenshots
 
+## Screenshots
+
 <table>
   <tr>
     <td>
@@ -26,22 +28,22 @@ A Python desktop application for **visualizing and segmenting organs in CT scans
     <td>
       <img src="https://github.com/user-attachments/assets/61ec8d28-5a87-4ba3-8943-d2a2a251a05f" width="300"/>
     </td>
-  </tr>
-  <tr>
     <td>
       <img src="https://github.com/user-attachments/assets/70f1846b-d8fa-4ad7-9a47-17a9e581abf9" width="300"/>
     </td>
+  </tr>
+  <tr>
     <td>
       <img src="https://github.com/user-attachments/assets/21e38c39-465e-4138-87b5-75070d39ae16" width="300"/>
     </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/dd04372e-cc68-48af-8db7-adce472c3763" width="300"/>
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/71282c6f-7dce-4a04-b9dd-2f311efaf1b5" width="300"/>
+    </td>
   </tr>
 </table>
-
-![WhatsAppVideo2025-10-02at03 44 17_c3daebc4-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/dd04372e-cc68-48af-8db7-adce472c3763)
-
-
-![WhatsAppVideo2025-10-02at03 44 17_c3daebc4-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/71282c6f-7dce-4a04-b9dd-2f311efaf1b5)
-
 ---
 
 ## Quickstart
