@@ -36,6 +36,8 @@ A Python desktop application for **visualizing and segmenting organs in CT scans
     </td>
   </tr>
 </table>
+![WhatsAppVideo2025-10-02at03 44 17_c3daebc4-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/dd04372e-cc68-48af-8db7-adce472c3763)
+![WhatsAppVideo2025-10-02at03 44 17_c3daebc4-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/71282c6f-7dce-4a04-b9dd-2f311efaf1b5)
 
 ---
 
