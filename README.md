@@ -1,6 +1,6 @@
-# CT Scan Medical organ segmentation 
+ys# CT Scan Medical organ segmentation 
 
-A Python desktop application for **visualizing and segmenting organs in CT scans** with advanced 3D opacity control. Load a NIfTI CT file, segment organs using [TotalSegmentator](https://github.com/wasserth/TotalSegmentator), explore 2D overlays, customize overlay colors, and interactively adjust 3D model opacity.
+A Python desktop application for **visualizing and segmenting organs in CT scans** with advanced 3D opacity control. Load a NIfTI CT file, segment organs using [TotalSegmentator](https://github.com/wa[...]
 
 ---
 
@@ -17,12 +17,25 @@ A Python desktop application for **visualizing and segmenting organs in CT scans
 ---
 
 ## Screenshots
-![image 3](https://github.com/user-attachments/assets/f1a7d3ba-dbf9-4c5a-8bb6-380c9b5d6374)
-![image 1 ](https://github.com/user-attachments/assets/61ec8d28-5a87-4ba3-8943-d2a2a251a05f)
-![iamge 2](https://github.com/user-attachments/assets/70f1846b-d8fa-4ad7-9a47-17a9e581abf9)
-![WhatsAppVideo2025-10-01at20 48 58_f433d044-ezgif com-optimize](https://github.com/user-attachments/assets/21e38c39-465e-4138-87b5-75070d39ae16)
 
-
+<table>
+  <tr>
+    <td>
+      <img src="https://github.com/user-attachments/assets/f1a7d3ba-dbf9-4c5a-8bb6-380c9b5d6374" width="300"/>
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/61ec8d28-5a87-4ba3-8943-d2a2a251a05f" width="300"/>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://github.com/user-attachments/assets/70f1846b-d8fa-4ad7-9a47-17a9e581abf9" width="300"/>
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/21e38c39-465e-4138-87b5-75070d39ae16" width="300"/>
+    </td>
+  </tr>
+</table>
 
 ---
 
