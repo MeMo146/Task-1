@@ -74,7 +74,7 @@ python ct_segmentation_viewer2.py
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.8+( python 3.10 preferably )
 - Windows or Linux (PyVistaQt may not work on Mac)
 - GPU recommended for faster segmentation
 
