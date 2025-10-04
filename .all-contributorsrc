@@ -1,1 +1,11 @@
-
+{
+  "projectName": "Task-1",
+  "projectOwner": "youssefh4",
+  "repoType": "public",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": true,
+  "contributors": []
+}
