@@ -7,5 +7,18 @@
   ],
   "imageSize": 100,
   "commit": true,
-  "contributors": []
+  "contributors": [
+    {
+      "login": "youssefh4",
+      "name": "youssef hisham ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/211988432?v=4",
+      "profile": "https://github.com/youssefh4",
+      "contributions": [
+        "code"
+      ]
+    }
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7
 }
