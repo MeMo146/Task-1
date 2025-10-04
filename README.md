@@ -13,6 +13,7 @@ A Python desktop application for **visualizing and segmenting organs in CT scans
 - **Custom overlay colors** for each organ (2D)
 - **3D Model Viewer:** Interactive 3D visualization with PyVista
 - **Adjustable 3D model opacity** with a slider for better visualization
+- **Fo more info visit index.md 
 
 ---
 
