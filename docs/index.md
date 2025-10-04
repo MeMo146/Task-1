@@ -52,7 +52,7 @@ pip install totalsegmentator nibabel numpy matplotlib scikit-image pyvista pyvis
 
 ## File Structure
 
-- `ct_segmentation_gui.py` — Main application script.
+- `main.py` — Main application script.
 - `docs/` — Documentation folder (you are here!)
 
 ## Notes
