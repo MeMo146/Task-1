@@ -106,7 +106,16 @@ python ct_segmentation_viewer2.py
 - [nibabel](https://github.com/nipy/nibabel)
 
 ---
+## Contributors ✨
 
+Thanks goes to these people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://allcontributors.org) specification. Contributions of any kind welcome!
+
+---
 ## License
 
 This project is for educational and demonstration purposes.
