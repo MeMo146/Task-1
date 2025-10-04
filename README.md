@@ -128,7 +128,7 @@ Thanks goes to these people ([emoji key](https://allcontributors.org/docs/en/emo
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://allcontributors.org) specification. Contributions of any kind welcome!
+
 
 ---
 ## License
