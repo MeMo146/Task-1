@@ -57,7 +57,7 @@ pip install -r requirements.txt
 ### 2. Run the app
 
 ```bash
-python ct_segmentation_viewer2.py
+python main.py
 ```
 
 ### 3. Workflow
